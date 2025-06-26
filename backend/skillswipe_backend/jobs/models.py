@@ -1,3 +1,175 @@
+import uuid
 from django.db import models
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator
+from django.contrib.postgres.fields import ArrayField
+from profiles.models import CompanyProfile
 
-# Create your models here.
+
+User = get_user_model()
+
+
+class JobPosting(models.Model):
+    """
+    Job posting model with comprehensive job details.
+    """
+    
+    JOB_TYPE_CHOICES = [
+        ('full-time', 'Full Time'),
+        ('part-time', 'Part Time'),
+        ('intern', 'Internship'),
+        ('contract', 'Contract'),
+    ]
+    
+    WORK_MODE_CHOICES = [
+        ('remote', 'Remote'),
+        ('in-office', 'In Office'),
+        ('hybrid', 'Hybrid'),
+    ]
+    
+    EXPERIENCE_CHOICES = [
+        ('entry', 'Entry Level'),
+        ('mid', 'Mid Level'),
+        ('senior', 'Senior Level'),
+        ('lead', 'Lead/Principal'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('closed', 'Closed'),
+        ('draft', 'Draft'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Company relationship
+    company = models.ForeignKey(
+        CompanyProfile,
+        on_delete=models.CASCADE,
+        related_name='job_postings'
+    )
+    
+    # Job Details
+    title = models.CharField(max_length=255)
+    description = models.TextField(help_text="Detailed job description")
+    
+    job_type = models.CharField(
+        max_length=20,
+        choices=JOB_TYPE_CHOICES,
+        help_text="Type of employment"
+    )
+    
+    work_mode = models.CharField(
+        max_length=20,
+        choices=WORK_MODE_CHOICES,
+        help_text="Work arrangement"
+    )
+    
+    # Technical Requirements
+    tech_stack = ArrayField(
+        models.CharField(max_length=50),
+        help_text="Required technologies and skills"
+    )
+    
+    location = models.CharField(
+        max_length=255,
+        help_text="Job location"
+    )
+    
+    # Salary Information
+    salary_min = models.PositiveIntegerField(
+        blank=True, 
+        null=True,
+        validators=[MinValueValidator(0)],
+        help_text="Minimum salary range"
+    )
+    
+    salary_max = models.PositiveIntegerField(
+        blank=True, 
+        null=True,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum salary range"
+    )
+    
+    # Experience Requirements
+    experience_required = models.CharField(
+        max_length=20,
+        choices=EXPERIENCE_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Required experience level"
+    )
+    
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active'
+    )
+    
+    # Metadata
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_jobs',
+        help_text="User who created this job posting"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'job_posting'
+        indexes = [
+            models.Index(fields=['status', 'created_at'], name='idx_job_active'),
+            models.Index(fields=['company', 'status'], name='idx_job_company'),
+            models.Index(fields=['location', 'status'], name='idx_job_location'),
+        ]
+        ordering = ['-created_at']   # Latest jobs first
+    
+    def __str__(self):
+        return f"{self.title} at {self.company.name}"
+    
+    @property
+    def is_active(self):
+        """Check if job posting is active"""
+        return self.status == 'active'
+    
+    def close_job(self):
+        """Close the job posting"""
+        self.status = 'closed'
+        self.save(update_fields=['status'])
+
+
+class Wishlist(models.Model):
+    """
+    User's wishlist for saving jobs/developers for later.
+    """
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='wishlists'
+    )
+    
+    job_post = models.ForeignKey(
+        JobPosting,
+        on_delete=models.CASCADE,
+        related_name='wishlisted_by'
+    )
+    
+    saved_on = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'wishlist'
+        unique_together = ['user', 'job_post']  # Ensure unique wishlist entries
+        indexes = [
+            models.Index(fields=['user', 'saved_on'], name='idx_wishlist_user'),
+        ]
+        ordering = ['-saved_on']  # Latest saved first
+    
+    def __str__(self):
+        return f"{self.user.username} -> {self.job_post.title}"

@@ -1,0 +1,33 @@
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Environment Variables (IMPORTANT - contains passwords!)
+.env
+
+# Python Cache Files
+__pycache__/
+*.pyc
+*.pyo
+
+# Database Files
+*.sqlite3
+*.db
+
+# Log Files
+*.log
+
+# Django Media Files (user uploads)
+media/
+
+# IDE Files
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Backup Files
+*.bak

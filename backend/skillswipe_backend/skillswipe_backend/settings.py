@@ -202,4 +202,6 @@ CORS_ALLOWED_HEADERS = [
     'x-requested-with',
 ]
 
+# Custom User Model
+AUTH_USER_MODEL = 'authentication.User'
 
