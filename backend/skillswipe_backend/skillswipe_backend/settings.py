@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'djoser',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # Add this line
     'corsheaders',
     
     # Local apps
@@ -148,7 +149,7 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20
 }
 
-# Simple JWT Configuration
+# SIMPLE_JWT configuration
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -205,3 +206,17 @@ CORS_ALLOWED_HEADERS = [
 # Custom User Model
 AUTH_USER_MODEL = 'authentication.User'
 
+# Djoser Configuration 
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'USER_ID_FIELD': 'email', 
+    'SEND_ACTIVATION_EMAIL': False,
+    'SERIALIZERS': {
+        'user_create': 'authentication.serializers.CustomUserCreateSerializer',
+        'user': 'authentication.serializers.CustomUserSerializer',
+        'token_create': 'djoser.serializers.TokenCreateSerializer',  
+    },
+    'PERMISSIONS': {
+        'user_create': ['rest_framework.permissions.AllowAny'],
+    },
+}
