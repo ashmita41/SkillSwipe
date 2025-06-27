@@ -7,8 +7,8 @@ urlpatterns = [
     path('auth/', include('djoser.urls.jwt')),
     
     # Custom authentication endpoints
-    path('auth/login/', views.login_view, name='custom-login'),
-    path('auth/profile-status/', views.profile_status, name='profile-status'),
-    path('auth/ping/', views.update_activity, name='update-activity'),
-    path('auth/logout/', views.logout_view, name='custom-logout'),
+    path('login/', views.login_view, name='custom-login'),
+    path('profile-status/', views.profile_status, name='profile-status'),
+    path('ping/', views.update_activity, name='update-activity'),
+    path('logout/', views.logout_view, name='custom-logout'),
 ]
