@@ -1,10 +1,11 @@
 # Virtual Environment
-venv/
-env/
-.venv/
-
-# Environment Variables (IMPORTANT - contains passwords!)
-.env
+.env 
+.venv 
+env/ 
+venv/ 
+ENV/ 
+env.bak/ 
+venv.bak/ 
 
 # Python Cache Files
 __pycache__/
@@ -18,7 +19,10 @@ __pycache__/
 # Log Files
 *.log
 
-# Django Media Files (user uploads)
+# Django #
+*.log
+*.pot
+*.pyc
 media/
 
 # IDE Files
@@ -31,3 +35,4 @@ Thumbs.db
 
 # Backup Files
 *.bak
+
