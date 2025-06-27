@@ -30,7 +30,7 @@ class User(AbstractUser):
         editable=False
     )
     
-    # Role field - required for business logic
+    # Role field 
     role = models.CharField(
         max_length=20, 
         choices=ROLE_CHOICES,
@@ -60,7 +60,7 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'auth_user'  # Keep default table name for compatibility
+        db_table = 'auth_user'  # Default table name
         indexes = [
             models.Index(fields=['status', 'last_ping'], name='idx_user_status_ping'),
             models.Index(fields=['role', 'status'], name='idx_user_role_status'),
