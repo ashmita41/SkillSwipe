@@ -53,10 +53,12 @@ const LandingPage = () => {
               transition={{ delay: 0.6, duration: 0.8 }}
               className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
             >
-              <Button size="lg" className="group shadow-lg hover:shadow-xl transition-all duration-300">
-                Start Your Journey
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              <Link to="/register">
+                <Button size="lg" className="group shadow-lg hover:shadow-xl transition-all duration-300">
+                  Start Your Journey
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
               <Button variant="outline" size="lg" className="border-2 hover:bg-primary-50">
                 Watch Demo
               </Button>

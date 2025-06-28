@@ -1,20 +1,48 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
 import LandingPage from './pages/LandingPage'
+import RegisterPage from './pages/RegisterPage'
+import LoginPage from './pages/LoginPage'
+import ProfileSetupPage from './pages/ProfileSetupPage'
 import './App.css'
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          {/* Future routes will be added here */}
-          <Route path="/register" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Registration Page</h1><p className="text-gray-600">Coming Soon...</p></div></div>} />
-          <Route path="/login" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Login Page</h1><p className="text-gray-600">Coming Soon...</p></div></div>} />
-        </Routes>
-      </div>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            
+            {/* Protected Routes (will be properly protected in step 3) */}
+            <Route path="/profile-setup" element={<ProfileSetupPage />} />
+            
+            {/* Placeholder routes for step 3 and beyond */}
+            <Route path="/dashboard" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Dashboard</h1><p className="text-gray-600">Coming in Step 3...</p></div></div>} />
+            <Route path="/profile" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Profile</h1><p className="text-gray-600">Coming in Step 3...</p></div></div>} />
+            <Route path="/jobs" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Jobs</h1><p className="text-gray-600">Coming in Step 4...</p></div></div>} />
+            <Route path="/swipe" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Swipe</h1><p className="text-gray-600">Coming in Step 4...</p></div></div>} />
+            
+            {/* 404 Route */}
+            <Route path="*" element={
+              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+                <div className="text-center">
+                  <h1 className="text-6xl font-bold gradient-text mb-4">404</h1>
+                  <p className="text-gray-600 mb-6">Page not found</p>
+                  <a href="/" className="text-primary-600 hover:text-primary-500 transition-colors">
+                    ← Back to Home
+                  </a>
+                </div>
+              </div>
+            } />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
 
