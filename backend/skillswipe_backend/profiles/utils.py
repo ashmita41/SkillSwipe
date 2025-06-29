@@ -47,9 +47,28 @@ def get_user_profile_status(user):
     Used by authentication APIs.
     """
     if user.role == 'developer':
-        has_profile = hasattr(user, 'developer_profile')
-        if has_profile:
-            profile = user.developer_profile
+        # Refresh user from database to get latest related objects
+        user.refresh_from_db()
+        
+        # Try multiple ways to check for profile existence
+        has_profile = False
+        profile = None
+        
+        try:
+            # First try hasattr (fastest)
+            if hasattr(user, 'developer_profile'):
+                profile = user.developer_profile
+                has_profile = True
+            else:
+                # If hasattr fails, try direct database query
+                from .models import DeveloperProfile
+                profile = DeveloperProfile.objects.filter(user=user).first()
+                has_profile = profile is not None
+        except Exception as e:
+            print(f"DEBUG: Error checking developer profile: {e}")
+            has_profile = False
+            
+        if has_profile and profile:
             completion_percentage = calculate_developer_profile_completion(profile)
             
             # Determine next step
@@ -70,6 +89,9 @@ def get_user_profile_status(user):
             next_step = "create_developer_profile"
     
     elif user.role == 'company':
+        # Refresh user from database to get latest related objects
+        user.refresh_from_db()
+        
         has_profile = user.company_memberships.exists()
         if has_profile:
             company = user.company_memberships.first().company
@@ -88,10 +110,12 @@ def get_user_profile_status(user):
             completion_percentage = 0
             next_step = "create_company_profile"
     
+    print(f"DEBUG: Profile status for {user.username} ({user.role}): has_profile={has_profile}, completion={completion_percentage if 'completion_percentage' in locals() else 0}")
+    
     return {
         'has_profile': has_profile,
-        'profile_completion': completion_percentage,
-        'next_required_step': next_step,
+        'profile_completion': completion_percentage if 'completion_percentage' in locals() else 0,
+        'next_required_step': next_step if 'next_step' in locals() else 'unknown',
         'user_role': user.role,
         'profile_mandatory': True
     }

@@ -7,6 +7,7 @@ const Button = ({
   className = '', 
   disabled = false,
   onClick,
+  type = 'button',
   ...props 
 }) => {
   const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
@@ -31,6 +32,7 @@ const Button = ({
       className={classes}
       disabled={disabled}
       onClick={onClick}
+      type={type}
       {...props}
     >
       {children}

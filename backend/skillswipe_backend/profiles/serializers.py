@@ -114,15 +114,18 @@ class DeveloperProfileCreateSerializer(DeveloperProfileSerializer):
 class DeveloperProfilePublicSerializer(serializers.ModelSerializer):
     """Public serializer for developer profiles (for swiping/viewing)"""
     
+    user_id = serializers.CharField(source='user.id', read_only=True)
     username = serializers.CharField(source='user.username', read_only=True)
     profile_completion = serializers.SerializerMethodField()
     
     class Meta:
         model = DeveloperProfile
         fields = [
-            'id', 'username', 'name', 'bio', 'current_location', 'experience_years',
-            'top_languages', 'tools', 'domains', 'certifications',
-            'willing_to_relocate', 'top_two_cities', 'github',
+            'id', 'user_id', 'username', 'name', 'bio', 'current_location', 'experience_years',
+            'top_languages', 'tools', 'databases', 'domains', 'clouds', 'certifications', 'awards', 'open_source',
+            'salary_expectation_min', 'salary_expectation_max',
+            'willing_to_relocate', 'top_two_cities', 
+            'github', 'leetcode', 'github_for_geeks', 'hackerrank',
             'profile_completion', 'created_at'
         ]
 
@@ -209,17 +212,29 @@ class CompanyProfilePublicSerializer(serializers.ModelSerializer):
     """Public serializer for company profiles (for swiping/viewing)"""
     
     total_users = serializers.SerializerMethodField()
+    user_id = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
     
     class Meta:
         model = CompanyProfile
         fields = [
-            'id', 'name', 'about', 'location', 'website', 'linkedin_url',
+            'id', 'user_id', 'username', 'name', 'about', 'location', 'website', 'linkedin_url',
             'total_users', 'created_at'
         ]
 
     def get_total_users(self, obj):
         """Get total users in this company"""
         return obj.users.count()
+    
+    def get_user_id(self, obj):
+        """Get the user ID of the primary company user (creator or first user)"""
+        # For swipe context, we need a specific user ID to swipe on
+        # Use the creator as the primary user for swiping
+        return str(obj.created_by_user.id)
+    
+    def get_username(self, obj):
+        """Get the username of the primary company user"""
+        return obj.created_by_user.username
 
 
 class CompanyUsersSerializer(serializers.ModelSerializer):

@@ -6,6 +6,11 @@ import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
 import DeveloperProfileForm from './pages/DeveloperProfileForm'
 import CompanyProfileForm from './pages/CompanyProfileForm'
+import Dashboard from './pages/Dashboard'
+import CreateJob from './pages/CreateJob'
+import Matches from './pages/Matches'
+import Wishlist from './pages/Wishlist'
+import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -35,42 +40,37 @@ function App() {
             {/* Protected Routes that require profile completion */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
-                  <div className="text-center">
-                    <h1 className="text-4xl font-bold gradient-text mb-4">Dashboard</h1>
-                    <p className="text-gray-600">Coming in Step 4...</p>
-                  </div>
-                </div>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/create-job" element={
+              <ProtectedRoute>
+                <CreateJob />
               </ProtectedRoute>
             } />
             <Route path="/profile" element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
-                  <div className="text-center">
-                    <h1 className="text-4xl font-bold gradient-text mb-4">Profile</h1>
-                    <p className="text-gray-600">Coming in Step 4...</p>
-                  </div>
-                </div>
+                <Profile />
               </ProtectedRoute>
             } />
-            <Route path="/jobs" element={
+            <Route path="/matches" element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
-                  <div className="text-center">
-                    <h1 className="text-4xl font-bold gradient-text mb-4">Jobs</h1>
-                    <p className="text-gray-600">Coming in Step 4...</p>
-                  </div>
-                </div>
+                <Matches />
               </ProtectedRoute>
             } />
-            <Route path="/swipe" element={
+            <Route path="/wishlist" element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
-                  <div className="text-center">
-                    <h1 className="text-4xl font-bold gradient-text mb-4">Swipe</h1>
-                    <p className="text-gray-600">Coming in Step 4...</p>
-                  </div>
-                </div>
+                <Wishlist />
+              </ProtectedRoute>
+            } />
+            <Route path="/developer-profile" element={
+              <ProtectedRoute>
+                <DeveloperProfileForm />
+              </ProtectedRoute>
+            } />
+            <Route path="/company-profile" element={
+              <ProtectedRoute>
+                <CompanyProfileForm />
               </ProtectedRoute>
             } />
             

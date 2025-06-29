@@ -302,3 +302,5 @@ class WishlistViewSet(viewsets.ModelViewSet):
         return Response({
             'message': f'Cleared {deleted_count} items from wishlist'
         })
+
+

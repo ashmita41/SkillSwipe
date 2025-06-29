@@ -186,25 +186,72 @@ class Match(models.Model):
     def create_if_mutual_swipe(cls, swiper, swiped_on, job_post=None):
         """
         Create a match if there's a mutual swipe.
+        Enhanced logic for developer-company job-based matching.
         Returns (match_instance, created) tuple.
         """
-        # Check if there's a reverse swipe
-        reverse_swipe_exists = SwipeActions.objects.filter(
-            swiper=swiped_on,
-            swiped_on=swiper
-        ).exists()
+        print(f"DEBUG MATCH: Checking mutual swipe - Swiper: {swiper.username} ({swiper.role}), Swiped on: {swiped_on.username} ({swiped_on.role}), Job: {job_post.title if job_post else 'None'}")
         
-        if reverse_swipe_exists:
+        match_found = False
+        match_job_context = None
+        
+        if swiper.role == 'developer' and swiped_on.role == 'company' and job_post:
+            # Developer swiped on company's job - check if company swiped on this developer
+            company_swipe_exists = SwipeActions.objects.filter(
+                swiper=swiped_on,  # Company
+                swiped_on=swiper,  # Developer  
+                swipe_type='profile'
+            ).exists()
+            
+            if company_swipe_exists:
+                match_found = True
+                match_job_context = job_post
+                print(f"DEBUG MATCH: Found mutual swipe - Developer {swiper.username} liked job {job_post.title}, Company {swiped_on.username} liked developer")
+            
+        elif swiper.role == 'company' and swiped_on.role == 'developer':
+            # Company swiped on developer - check if developer swiped on any of this company's jobs
+            developer_job_swipes = SwipeActions.objects.filter(
+                swiper=swiped_on,  # Developer
+                swiped_on=swiper,  # Company
+                swipe_type='job',
+                job_post__isnull=False
+            ).select_related('job_post')
+            
+            if developer_job_swipes.exists():
+                # Take the most recent job swipe for match context
+                latest_job_swipe = developer_job_swipes.first()
+                match_found = True
+                match_job_context = latest_job_swipe.job_post
+                print(f"DEBUG MATCH: Found mutual swipe - Company {swiper.username} liked developer {swiped_on.username}, Developer liked job {match_job_context.title}")
+        
+        else:
+            # For same-role swipes or other scenarios, use simple reverse check
+            reverse_swipe_exists = SwipeActions.objects.filter(
+                swiper=swiped_on,
+                swiped_on=swiper
+            ).exists()
+            
+            if reverse_swipe_exists:
+                match_found = True
+                match_job_context = job_post
+                print(f"DEBUG MATCH: Found simple mutual swipe between {swiper.username} and {swiped_on.username}")
+        
+        if match_found:
             # Ensure consistent ordering for user_1 and user_2
             user_1, user_2 = (swiper, swiped_on) if swiper.id < swiped_on.id else (swiped_on, swiper)
             
-            match, created = cls.objects.get_or_create(
-                user_1=user_1,
-                user_2=user_2,
-                job_post=job_post,
-                defaults={'status': 'active'}
-            )
-            return match, created
+            try:
+                match, created = cls.objects.get_or_create(
+                    user_1=user_1,
+                    user_2=user_2,
+                    job_post=match_job_context,
+                    defaults={'status': 'active'}
+                )
+                print(f"DEBUG MATCH: {'Created new' if created else 'Found existing'} match between {user_1.username} and {user_2.username} for job {match_job_context.title if match_job_context else 'None'}")
+                return match, created
+            except Exception as e:
+                print(f"DEBUG MATCH: Error creating match: {e}")
+                return None, False
         
+        print(f"DEBUG MATCH: No mutual swipe found")
         return None, False
 

@@ -9,8 +9,8 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50">
       {/* Header */}
-      <header className="container mx-auto px-6 py-6 sticky top-0 backdrop-blur-glass z-50 rounded-b-lg shadow-sm">
-        <nav className="flex items-center justify-center">
+      <header className="sticky top-0 backdrop-blur-glass z-50 shadow-sm">
+        <nav className="container mx-auto px-6 py-6 flex items-center justify-center">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}

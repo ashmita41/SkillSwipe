@@ -30,12 +30,19 @@ export const AuthProvider = ({ children }) => {
           setUser(parsedUser)
           setIsAuthenticated(true)
           
-          // Update activity ping
-          await authAPI.updateActivity()
+          // Try to update activity ping, but don't fail auth if it fails
+          try {
+            await authAPI.updateActivity()
+          } catch (pingError) {
+            console.warn('Activity ping failed, but user is still authenticated:', pingError)
+            // Don't clear auth data just because ping failed
+          }
         } catch (error) {
           console.error('Auth check failed:', error)
-          // Clear invalid tokens
-          clearAuthData()
+          // Only clear auth data for parsing errors, not ping failures
+          if (error.name === 'SyntaxError' || error.message.includes('JSON')) {
+            clearAuthData()
+          }
         }
       }
       setLoading(false)

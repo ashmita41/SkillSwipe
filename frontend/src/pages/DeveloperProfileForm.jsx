@@ -107,6 +107,8 @@ const DeveloperProfileForm = () => {
   
   const [errors, setErrors] = useState({})
   const [currentStep, setCurrentStep] = useState(1)
+  const [canSubmit, setCanSubmit] = useState(false)
+  const [profileCreated, setProfileCreated] = useState(false)
   const totalSteps = 4
 
   const handleInputChange = (field, value) => {
@@ -137,8 +139,32 @@ const DeveloperProfileForm = () => {
   }
 
   const nextStep = () => {
+    // Don't allow form operations if profile was already created
+    if (profileCreated) {
+      console.log('Profile already created, ignoring nextStep')
+      return
+    }
+    
+    console.log('nextStep called, current step:', currentStep)
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, totalSteps))
+      const newStep = Math.min(currentStep + 1, totalSteps)
+      console.log('Moving to step:', newStep)
+      setCurrentStep(newStep)
+      
+      // If we just moved to the final step, add a small delay to prevent immediate submission
+      if (newStep === totalSteps) {
+        console.log('Reached final step, preventing immediate submission')
+        setCanSubmit(false)
+        setTimeout(() => {
+          console.log('Step 4 rendered, ready for user input')
+          setCanSubmit(true)
+        }, 500)
+      } else {
+        // For other steps, allow immediate progression
+        setCanSubmit(true)
+      }
+    } else {
+      console.log('Step validation failed for step:', currentStep)
     }
   }
 
@@ -148,6 +174,19 @@ const DeveloperProfileForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log('handleSubmit called, current step:', currentStep, 'canSubmit:', canSubmit)
+    
+    // Only allow submission on the final step
+    if (currentStep !== totalSteps) {
+      console.log('Form submitted but not on final step, preventing submission')
+      return
+    }
+    
+    // Prevent immediate submission after reaching step 4
+    if (!canSubmit) {
+      console.log('Form submitted too quickly after reaching step 4, preventing submission')
+      return
+    }
     
     // Validate all required fields
     if (!validateStep(1) || !validateStep(2)) {
@@ -163,8 +202,8 @@ const DeveloperProfileForm = () => {
       experience_years: parseInt(formData.experience_years),
       salary_expectation_min: formData.salary_expectation_min ? parseInt(formData.salary_expectation_min) : null,
       salary_expectation_max: formData.salary_expectation_max ? parseInt(formData.salary_expectation_max) : null,
-      // Add city field (backend expects both city and current_location)
-      city: formData.current_location, // Use current_location as city for now
+      city: formData.current_location, 
+      job_preferences: {},
     }
 
     // Remove empty string fields but keep null values and empty arrays
@@ -177,13 +216,38 @@ const DeveloperProfileForm = () => {
     console.log('Final profile data being sent:', profileData)
 
     try {
-      await profileAPI.createDeveloperProfile(profileData)
+      const response = await profileAPI.createDeveloperProfile(profileData)
+      console.log('Profile created successfully:', response)
       
-      // Success - redirect to dashboard
-      navigate('/dashboard')
+      // Set local flag to prevent form operations
+      setProfileCreated(true)
+      
+      // Set flag to prevent immediate profile status re-check
+      sessionStorage.setItem('profileJustCreated', 'true')
+      sessionStorage.setItem('profileCreatedTime', Date.now().toString())
+      
+      console.log('Profile creation flags set, navigating to dashboard')
+      
+      // Show success message to user
+      alert('Profile created successfully! Redirecting to dashboard...')
+      
+      // Try multiple navigation approaches
+      console.log('Attempting navigation to dashboard')
+      
+      // Immediate navigation
+      navigate('/dashboard', { replace: true })
+      
+      // Force page navigation as backup
+      setTimeout(() => {
+        console.log('Backup navigation - checking if still on form page')
+        if (window.location.pathname.includes('create-developer-profile')) {
+          console.log('Still on form page, forcing window navigation')
+          window.location.href = '/dashboard'
+        }
+      }, 500)
+    
     } catch (error) {
       console.error('Profile creation failed:', error)
-      console.error('Profile data sent:', profileData)
       
       // Handle validation errors from backend
       if (error.validationErrors) {
@@ -193,7 +257,11 @@ const DeveloperProfileForm = () => {
         setErrors({ general: error.message || 'Failed to create profile. Please try again.' })
       }
     } finally {
-      setLoading(false)
+      // Only set loading to false if profile creation failed
+      if (!profileCreated) {
+        setLoading(false)
+      }
+      // If profile was created successfully, keep loading state to show redirect progress
     }
   }
 
@@ -528,7 +596,12 @@ const DeveloperProfileForm = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
         >
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} onKeyDown={(e) => {
+            if (e.key === 'Enter' && currentStep < totalSteps) {
+              e.preventDefault()
+              console.log('Enter key pressed, preventing form submission on step:', currentStep)
+            }
+          }}>
             {errors.general && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-600 text-sm">{errors.general}</p>
@@ -555,8 +628,9 @@ const DeveloperProfileForm = () => {
                     Next
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={loading}>
-                    {loading ? <LoadingSpinner size="sm" /> : 'Create Profile'}
+                  <Button type="submit" disabled={loading || !canSubmit}>
+                    {loading ? <LoadingSpinner size="sm" /> : 
+                     !canSubmit ? 'Loading Step...' : 'Create Profile'}
                   </Button>
                 )}
               </div>
