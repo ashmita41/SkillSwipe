@@ -4,7 +4,9 @@ import { AuthProvider } from './context/AuthContext'
 import LandingPage from './pages/LandingPage'
 import RegisterPage from './pages/RegisterPage'
 import LoginPage from './pages/LoginPage'
-import ProfileSetupPage from './pages/ProfileSetupPage'
+import DeveloperProfileForm from './pages/DeveloperProfileForm'
+import CompanyProfileForm from './pages/CompanyProfileForm'
+import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
 function App() {
@@ -18,14 +20,59 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             
-            {/* Protected Routes (will be properly protected in step 3) */}
-            <Route path="/profile-setup" element={<ProfileSetupPage />} />
+            {/* Profile Creation Routes - Protected but don't require existing profile */}
+            <Route path="/create-developer-profile" element={
+              <ProtectedRoute requireProfile={false}>
+                <DeveloperProfileForm />
+              </ProtectedRoute>
+            } />
+            <Route path="/create-company-profile" element={
+              <ProtectedRoute requireProfile={false}>
+                <CompanyProfileForm />
+              </ProtectedRoute>
+            } />
             
-            {/* Placeholder routes for step 3 and beyond */}
-            <Route path="/dashboard" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Dashboard</h1><p className="text-gray-600">Coming in Step 3...</p></div></div>} />
-            <Route path="/profile" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Profile</h1><p className="text-gray-600">Coming in Step 3...</p></div></div>} />
-            <Route path="/jobs" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Jobs</h1><p className="text-gray-600">Coming in Step 4...</p></div></div>} />
-            <Route path="/swipe" element={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50"><div className="text-center"><h1 className="text-4xl font-bold gradient-text mb-4">Swipe</h1><p className="text-gray-600">Coming in Step 4...</p></div></div>} />
+            {/* Protected Routes that require profile completion */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+                  <div className="text-center">
+                    <h1 className="text-4xl font-bold gradient-text mb-4">Dashboard</h1>
+                    <p className="text-gray-600">Coming in Step 4...</p>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+                  <div className="text-center">
+                    <h1 className="text-4xl font-bold gradient-text mb-4">Profile</h1>
+                    <p className="text-gray-600">Coming in Step 4...</p>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/jobs" element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+                  <div className="text-center">
+                    <h1 className="text-4xl font-bold gradient-text mb-4">Jobs</h1>
+                    <p className="text-gray-600">Coming in Step 4...</p>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/swipe" element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+                  <div className="text-center">
+                    <h1 className="text-4xl font-bold gradient-text mb-4">Swipe</h1>
+                    <p className="text-gray-600">Coming in Step 4...</p>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            } />
             
             {/* 404 Route */}
             <Route path="*" element={

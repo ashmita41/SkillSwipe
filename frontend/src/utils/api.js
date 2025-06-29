@@ -28,11 +28,38 @@ class ApiClient {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.detail || data.message || 'Something went wrong')
+        // Handle different types of errors
+        if (data.detail) {
+          throw new Error(data.detail)
+        } else if (data.message) {
+          throw new Error(data.message)
+        } else if (data.errors) {
+          // Handle validation errors from backend
+          const errorObj = new Error('Validation failed')
+          errorObj.validationErrors = data.errors
+          throw errorObj
+        } else if (typeof data === 'object' && Object.keys(data).length > 0) {
+          // Handle field-specific validation errors
+          const errorObj = new Error('Validation failed')
+          errorObj.validationErrors = data
+          throw errorObj
+        } else {
+          throw new Error(`Request failed with status ${response.status}`)
+        }
       }
 
       return data
     } catch (error) {
+      // If it's already our custom error, re-throw it
+      if (error.validationErrors) {
+        throw error
+      }
+      
+      // Handle network errors or JSON parsing errors
+      if (error instanceof SyntaxError) {
+        throw new Error('Invalid response from server')
+      }
+      
       throw error
     }
   }

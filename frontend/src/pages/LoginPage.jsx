@@ -23,7 +23,7 @@ const LoginPage = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/profile-setup')
+      navigate('/dashboard')
     }
   }, [isAuthenticated, navigate])
 
@@ -85,9 +85,8 @@ const LoginPage = () => {
       // Call login API
       const response = await login(formData)
       
-      // Check profile status and redirect accordingly
-      // For now, redirect to profile setup (we'll implement profile status check in step 3)
-      navigate('/profile-setup')
+      // Redirect to dashboard - ProtectedRoute will handle profile status checking
+      navigate('/dashboard')
       
     } catch (error) {
       console.error('Login failed:', error)

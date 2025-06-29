@@ -25,7 +25,7 @@ const RegisterPage = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/profile-setup')
+      navigate('/dashboard')
     }
   }, [isAuthenticated, navigate])
 
