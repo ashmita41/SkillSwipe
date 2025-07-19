@@ -185,55 +185,280 @@ class DashboardAPIView(APIView):
         user = request.user
         tab = request.query_params.get('tab', 'for_me')
         
+        print(f"🔍 Dashboard API called - User: {user.username}, Role: {user.role}, Tab: {tab}")
+        
         if tab == 'for_me':
             return self._get_for_me_tab(request)
         elif tab == 'showed_interest':
             return self._get_showed_interest_tab(request)
+        elif tab == 'my_swipes':
+            return self._get_my_swipes_tab(request)
         elif tab == 'matches':
             return self._get_matches_tab(request)
         elif tab == 'stats':
             return self._get_dashboard_stats(request)
         else:
             return Response(
-                {'error': 'Invalid tab. Choose: for_me, showed_interest, matches, stats'},
+                {'error': 'Invalid tab. Choose: for_me, showed_interest, my_swipes, matches, stats'},
                 status=status.HTTP_400_BAD_REQUEST
             )
     
     def _get_for_me_tab(self, request):
-        """Get swipes received by current user"""
+        """Get personalized recommendations (merged with discover logic)"""
         user = request.user
         
-        # Get swipes received by this user
-        swipes_received = SwipeActions.objects.filter(
-            swiped_on=user
-        ).select_related('swiper', 'job_post__company').order_by('-timestamp')
+        print(f"🔍 FOR_ME TAB - User: {user.username}, Role: {user.role}")
         
-        serializer = SwipeActionSerializer(swipes_received, many=True)
-        
-        return Response({
-            'tab': 'for_me',
-            'title': 'People/Companies Interested in You',
-            'count': len(serializer.data),
-            'results': serializer.data
-        })
+        if user.role == 'developer':
+            # DEVELOPER: Show JOBS in For Me tab
+            # Get already swiped jobs to exclude (from My Swipes)
+            swiped_jobs = SwipeActions.objects.filter(
+                swiper=user, swipe_type='job'
+            ).values_list('job_post_id', flat=True)
+            
+            # Get wishlisted jobs to exclude from feed
+            from jobs.models import Wishlist
+            wishlisted_jobs = Wishlist.objects.filter(
+                user=user, job_post__isnull=False
+            ).values_list('job_post_id', flat=True)
+            
+            # Get jobs excluding already swiped ones and wishlisted ones
+            jobs = JobPosting.objects.filter(
+                status='active'
+            ).exclude(
+                id__in=swiped_jobs  # Exclude jobs already swiped right on
+            ).exclude(
+                id__in=wishlisted_jobs  # Exclude wishlisted jobs
+            ).select_related('company').order_by('-created_at')[:20]
+            
+            from jobs.serializers import JobPostingPublicSerializer
+            serializer = JobPostingPublicSerializer(jobs, many=True, context={'request': request})
+            
+            print(f"🔍 FOR_ME (Developer) - Found {len(jobs)} jobs")
+            print(f"🔍 FOR_ME (Developer) - Excluded swiped jobs: {len(swiped_jobs)}")
+            print(f"🔍 FOR_ME (Developer) - Excluded wishlisted jobs: {len(wishlisted_jobs)}")
+            
+            return Response({
+                'tab': 'for_me',
+                'title': 'Discover New Job Opportunities',
+                'type': 'jobs',
+                'count': len(serializer.data),
+                'results': serializer.data
+            })
+        else:
+            # COMPANY: Show DEVELOPERS in For Me tab
+            # Get already swiped developers to exclude (from My Swipes)
+            swiped_developers = SwipeActions.objects.filter(
+                swiper=user, swipe_type='profile'
+            ).values_list('swiped_on_id', flat=True)
+            
+            # Get bookmarked developers to exclude from feed
+            from jobs.models import Wishlist
+            bookmarked_developers = Wishlist.objects.filter(
+                user=user, wishlisted_user__isnull=False
+            ).values_list('wishlisted_user_id', flat=True)
+            
+            # Get developers excluding already swiped ones and bookmarked ones
+            developers = User.objects.filter(
+                role='developer',
+                is_active=True
+            ).exclude(
+                id__in=swiped_developers  # Exclude developers already swiped right on
+            ).exclude(
+                id__in=bookmarked_developers  # Exclude bookmarked developers
+            ).exclude(
+                id=user.id
+            ).select_related('developer_profile').order_by('-date_joined')[:20]
+            
+            # Get developer profiles
+            developer_profiles = []
+            for dev_user in developers:
+                if hasattr(dev_user, 'developer_profile'):
+                    developer_profiles.append(dev_user.developer_profile)
+            
+            from profiles.serializers import DeveloperProfilePublicSerializer
+            serializer = DeveloperProfilePublicSerializer(
+                developer_profiles, many=True, context={'request': request}
+            )
+            
+            print(f"🔍 FOR_ME (Company) - Found {len(developers)} developers")
+            print(f"🔍 FOR_ME (Company) - Excluded swiped developers: {len(swiped_developers)}")
+            print(f"🔍 FOR_ME (Company) - Excluded bookmarked developers: {len(bookmarked_developers)}")
+            
+            return Response({
+                'tab': 'for_me',
+                'title': 'Discover New Developer Talent',
+                'type': 'developers',
+                'count': len(serializer.data),
+                'results': serializer.data
+            })
     
     def _get_showed_interest_tab(self, request):
-        """Get swipes made by current user"""
+        """Get users who showed interest in current user (swiped right on them)"""
         user = request.user
         
-        # Get swipes made by this user
-        swipes_made = SwipeActions.objects.filter(
-            swiper=user
-        ).select_related('swiped_on', 'job_post__company').order_by('-timestamp')
+        print(f"🔍 SHOWED_INTEREST TAB - User: {user.username}, Role: {user.role}")
         
-        serializer = SwipeActionSerializer(swipes_made, many=True)
+        if user.role == 'developer':
+            # DEVELOPER: Show COMPANIES who swiped right on this developer's profile
+            company_swipes = SwipeActions.objects.filter(
+                swiped_on=user, 
+                swipe_type='profile'
+            ).select_related('swiper').order_by('-timestamp')
+            
+            # Get companies that this developer has already swiped back on (to exclude)
+            already_swiped_companies = SwipeActions.objects.filter(
+                swiper=user, swipe_type='profile'
+            ).values_list('swiped_on_id', flat=True)
+            
+            print(f"🔍 SHOWED_INTEREST (Developer) - Company swipes received: {company_swipes.count()}")
+            print(f"🔍 SHOWED_INTEREST (Developer) - Already swiped companies: {len(already_swiped_companies)}")
+            
+            # Get company profiles (excluding already swiped)
+            company_data = []
+            for swipe in company_swipes:
+                company_user = swipe.swiper
+                
+                # Skip if developer has already swiped back on this company
+                if company_user.id in already_swiped_companies:
+                    continue
+                
+                # Get company profile for this user
+                if company_user.company_memberships.exists():
+                    company_profile = company_user.company_memberships.first().company
+                    
+                    from profiles.serializers import CompanyProfilePublicSerializer
+                    profile_data = CompanyProfilePublicSerializer(company_profile, context={'request': request}).data
+                    # Add the specific user who swiped for frontend use
+                    profile_data['user_id'] = str(company_user.id)
+                    profile_data['username'] = company_user.username
+                    profile_data['swipe_timestamp'] = swipe.timestamp.isoformat()
+                    company_data.append(profile_data)
+            
+            print(f"🔍 SHOWED_INTEREST (Developer) - Final company data: {len(company_data)}")
+            
+            return Response({
+                'tab': 'showed_interest',
+                'title': 'Companies Who Liked You',
+                'type': 'companies',
+                'count': len(company_data),
+                'results': company_data
+            })
+        else:
+            # COMPANY: Show DEVELOPERS who swiped right on this company's jobs
+            job_swipes = SwipeActions.objects.filter(
+                job_post__created_by=user,  # Jobs created by this company user
+                swipe_type='job'
+            ).select_related('swiper').order_by('-timestamp')
+            
+            # Get unique developer IDs who liked this company's jobs
+            developer_ids = set(job_swipes.values_list('swiper_id', flat=True))
+            
+            # Get developers that this company has already swiped back on (to exclude)
+            already_swiped_developers = SwipeActions.objects.filter(
+                swiper=user, swipe_type='profile'
+            ).values_list('swiped_on_id', flat=True)
+            
+            print(f"🔍 SHOWED_INTEREST (Company) - Job swipes received: {job_swipes.count()}")
+            print(f"🔍 SHOWED_INTEREST (Company) - Unique developers: {len(developer_ids)}")
+            print(f"🔍 SHOWED_INTEREST (Company) - Already swiped developers: {len(already_swiped_developers)}")
+            
+            # Exclude developers already swiped back on
+            available_developer_ids = [
+                dev_id for dev_id in developer_ids 
+                if dev_id not in already_swiped_developers
+            ]
+            
+            developers = User.objects.filter(
+                id__in=available_developer_ids, 
+                role='developer',
+                is_active=True
+            ).select_related('developer_profile')
+            
+            # Get developer profiles
+            developer_profiles = []
+            for dev_user in developers:
+                if hasattr(dev_user, 'developer_profile'):
+                    developer_profiles.append(dev_user.developer_profile)
+            
+            from profiles.serializers import DeveloperProfilePublicSerializer
+            serializer = DeveloperProfilePublicSerializer(
+                developer_profiles, many=True, context={'request': request}
+            )
+            
+            print(f"🔍 SHOWED_INTEREST (Company) - Final developer profiles: {len(developer_profiles)}")
+            
+            return Response({
+                'tab': 'showed_interest',
+                'title': 'Developers Who Liked Your Jobs',
+                'type': 'developers',
+                'count': len(serializer.data),
+                'results': serializer.data
+            })
+    
+    def _get_my_swipes_tab(self, request):
+        """Get users that current user has swiped right on"""
+        user = request.user
         
-        return Response({
-            'tab': 'showed_interest',
-            'title': 'Your Interest History',
-            'count': len(serializer.data),
-            'results': serializer.data
-        })
+        print(f"🔍 MY_SWIPES TAB - User: {user.username}, Role: {user.role}")
+        
+        if user.role == 'developer':
+            # DEVELOPER: Show JOBS that this developer swiped right on
+            job_swipes = SwipeActions.objects.filter(
+                swiper=user,
+                swipe_type='job'
+            ).select_related('job_post').order_by('-timestamp')
+            
+            print(f"🔍 MY_SWIPES (Developer) - Job swipes made: {job_swipes.count()}")
+            
+            jobs = []
+            for swipe in job_swipes:
+                if swipe.job_post and swipe.job_post.status == 'active':
+                    jobs.append(swipe.job_post)
+            
+            from jobs.serializers import JobPostingPublicSerializer
+            serializer = JobPostingPublicSerializer(
+                jobs, many=True, context={'request': request}
+            )
+            
+            print(f"🔍 MY_SWIPES (Developer) - Active jobs: {len(jobs)}")
+            
+            return Response({
+                'tab': 'my_swipes',
+                'title': 'Jobs You Liked',
+                'type': 'jobs',
+                'count': len(serializer.data),
+                'results': serializer.data
+            })
+        else:
+            # COMPANY: Show DEVELOPERS that this company swiped right on
+            profile_swipes = SwipeActions.objects.filter(
+                swiper=user,
+                swipe_type='profile'
+            ).select_related('swiped_on').order_by('-timestamp')
+            
+            print(f"🔍 MY_SWIPES (Company) - Profile swipes made: {profile_swipes.count()}")
+            
+            developer_profiles = []
+            for swipe in profile_swipes:
+                if (hasattr(swipe.swiped_on, 'developer_profile') and 
+                    swipe.swiped_on.is_active):
+                    developer_profiles.append(swipe.swiped_on.developer_profile)
+            
+            from profiles.serializers import DeveloperProfilePublicSerializer
+            serializer = DeveloperProfilePublicSerializer(
+                developer_profiles, many=True, context={'request': request}
+            )
+            
+            print(f"🔍 MY_SWIPES (Company) - Active developers: {len(developer_profiles)}")
+            
+            return Response({
+                'tab': 'my_swipes',
+                'title': 'Developers You Liked',
+                'type': 'developers',
+                'count': len(serializer.data),
+                'results': serializer.data
+            })
     
     def _get_matches_tab(self, request):
         """Get matches for current user"""
@@ -245,13 +470,57 @@ class DashboardAPIView(APIView):
             status='active'
         ).select_related('user_1', 'user_2', 'job_post__company').order_by('-matched_on')
         
-        serializer = MatchSerializer(matches, many=True)
+        print(f"DEBUG MATCHES: Found {matches.count()} matches for {user.username}")
+        
+        # Transform matches into displayable objects based on user role
+        match_data = []
+        
+        for match in matches:
+            # Determine the other user in the match
+            other_user = match.user_2 if match.user_1 == user else match.user_1
+            
+            print(f"DEBUG MATCHES: Processing match {match.id} - {user.username} <-> {other_user.username} via job {match.job_post.title if match.job_post else 'None'}")
+            
+            match_info = {
+                'match_id': str(match.id),
+                'matched_on': match.matched_on,
+                'job_context': None,
+                'matched_user': None
+            }
+            
+            # Add job context if available
+            if match.job_post:
+                from jobs.serializers import JobPostingPublicSerializer
+                job_serializer = JobPostingPublicSerializer(match.job_post, context={'request': request})
+                match_info['job_context'] = job_serializer.data
+            
+            # Add the matched user's profile
+            if other_user.role == 'developer' and hasattr(other_user, 'developer_profile'):
+                from profiles.serializers import DeveloperProfilePublicSerializer
+                profile_serializer = DeveloperProfilePublicSerializer(other_user.developer_profile, context={'request': request})
+                match_info['matched_user'] = profile_serializer.data
+                match_info['matched_user']['role'] = 'developer'
+            elif other_user.role == 'company' and other_user.company_memberships.exists():
+                from profiles.serializers import CompanyProfilePublicSerializer
+                company_profile = other_user.company_memberships.first().company
+                profile_serializer = CompanyProfilePublicSerializer(company_profile, context={'request': request})
+                match_info['matched_user'] = profile_serializer.data
+                match_info['matched_user']['role'] = 'company'
+            
+            if match_info['matched_user']:
+                match_data.append(match_info)
+                print(f"DEBUG MATCHES: Added match data for {other_user.username}")
+            else:
+                print(f"DEBUG MATCHES: Skipped match - no profile for {other_user.username}")
+        
+        print(f"DEBUG MATCHES: Returning {len(match_data)} displayable matches")
         
         return Response({
             'tab': 'matches',
             'title': 'Your Matches',
-            'count': len(serializer.data),
-            'results': serializer.data
+            'type': 'matches',
+            'count': len(match_data),
+            'results': match_data
         })
     
 

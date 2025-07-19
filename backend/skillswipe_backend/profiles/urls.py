@@ -8,6 +8,6 @@ router.register(r'developer', views.DeveloperProfileViewSet, basename='developer
 router.register(r'company', views.CompanyProfileViewSet, basename='company-profile')
 
 urlpatterns = [
-    # Include router URLs
-    path('profiles/', include(router.urls)),
+    # Include router URLs directly (no extra profiles/ prefix)
+    path('', include(router.urls)),
 ]

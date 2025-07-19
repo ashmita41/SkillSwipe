@@ -77,10 +77,12 @@ class SwipeCreateSerializer(serializers.Serializer):
             target_user = validated_data['target_user']
             job = None
             swiped_on = target_user
+            print(f"DEBUG SWIPE: Profile swipe - {swiper.username} ({swiper.role}) -> {target_user.username} ({target_user.role})")
         else:  # job swipe
             job = validated_data['job']
             target_user = job.created_by  # Company user who created the job
             swiped_on = target_user
+            print(f"DEBUG SWIPE: Job swipe - {swiper.username} ({swiper.role}) -> Job '{job.title}' by {target_user.username} ({target_user.role})")
         
         # Create swipe action
         try:
@@ -90,17 +92,27 @@ class SwipeCreateSerializer(serializers.Serializer):
                 job_post=job,
                 swipe_type=swipe_type
             )
+            print(f"DEBUG SWIPE: Successfully created swipe {swipe.id}")
         except Exception as e:
+            print(f"DEBUG SWIPE: Error creating swipe: {e}")
             if 'unique_profile_swipe' in str(e) or 'unique_job_swipe' in str(e):
                 raise serializers.ValidationError("You have already swiped on this item")
             raise serializers.ValidationError(f"Error creating swipe: {str(e)}")
         
         # Check for mutual match
+        print(f"DEBUG SWIPE: Checking for mutual match...")
         match, match_created = Match.create_if_mutual_swipe(
             swiper=swiper,
             swiped_on=swiped_on,
             job_post=job
         )
+        
+        if match_created:
+            print(f"DEBUG SWIPE: 🎉 MATCH CREATED! {match}")
+        elif match:
+            print(f"DEBUG SWIPE: Existing match found: {match}")
+        else:
+            print(f"DEBUG SWIPE: No mutual match yet")
         
         return {
             'swipe': swipe,

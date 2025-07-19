@@ -2,9 +2,9 @@ from django.urls import path, include
 from . import views
 
 urlpatterns = [
-    # Djoser authentication URLs
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
+    # Djoser authentication URLs (these will be at /api/auth/users/, /api/auth/jwt/, etc.)
+    path('', include('djoser.urls')),
+    path('', include('djoser.urls.jwt')),
     
     # Custom authentication endpoints
     path('login/', views.login_view, name='custom-login'),
